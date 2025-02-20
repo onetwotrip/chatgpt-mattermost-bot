@@ -14,6 +14,8 @@ import {MessageCollectPlugin} from "./plugins/MessageCollectPlugin";
 
 import {botLog, matterMostLog} from "./logging";
 
+import { summaryPrompt, summaryDayPrompt, summaryAdvicePrompt } from "./summary";
+
 if (!global.FormData) {
     global.FormData = require('form-data')
 }
@@ -32,13 +34,21 @@ const plugins: PluginBase<any>[] = [
     new MessageCollectPlugin("message-collect-plugin", "Collects messages in the thread for a specific user or time"),
 ]
 
-/* The main system instruction for GPT */
-const botInstructions = "Your name is " + name + ". " + additionalBotInstructions
-botLog.debug({botInstructions: botInstructions})
+function split(text: string, delimeter: string, length: number) {
+	let result = text.split(delimeter);
+	if (result.length > length) {
+	  result = [
+	    ...result.slice(0, length),
+	    result.slice(length).join(delimeter)
+	  ];
+	}
+
+	return result;
+}
 
 async function onClientMessage(msg: WebSocketMessage<JSONMessageData>, meId: string) {
     if (msg.event !== 'posted' || !meId) {
-        matterMostLog.debug({msg: msg})
+        matterMostLog.debug({ msg: msg })
         return
     }
 
@@ -47,6 +57,24 @@ async function onClientMessage(msg: WebSocketMessage<JSONMessageData>, meId: str
 
     if (isMessageIgnored(msgData, meId, posts)) {
         return
+    }
+
+    /* The main system instruction for GPT */
+    let botInstructions = "Your name is " + name + ". " + additionalBotInstructions
+    botLog.debug({botInstructions: botInstructions})
+
+    const splitMessage = split(msgData.post.message, ' ', 2);
+
+    if (splitMessage[1] === 'summary') {
+        botInstructions = summaryPrompt + (splitMessage[2] ?? '');
+    }
+
+    if (splitMessage[1] === 'summary_day') {
+        botInstructions = summaryDayPrompt + (splitMessage[2] ?? '');
+    }
+
+    if (splitMessage[1] === 'summary_advice') {
+        botInstructions = summaryAdvicePrompt + (splitMessage[2] ?? '');
     }
 
     const chatmessages: ChatCompletionRequestMessage[] = [
@@ -90,7 +118,7 @@ async function onClientMessage(msg: WebSocketMessage<JSONMessageData>, meId: str
             root_id: msgData.post.root_id || msgData.post.id,
             file_ids: fileId ? [fileId] : undefined
         })
-        botLog.trace({msg: newPost})
+        botLog.trace({ msg: newPost })
     } catch (e) {
         botLog.error(e)
         await mmClient.createPost({
@@ -115,28 +143,23 @@ async function onClientMessage(msg: WebSocketMessage<JSONMessageData>, meId: str
 function isMessageIgnored(msgData: MessageData, meId: string, previousPosts: Post[]): boolean {
     // we are not in a thread and not mentioned
     if (msgData.post.root_id === '' && !msgData.mentions.includes(meId)) {
-        return true
+        return true;
     }
-
     // it is our own message
     if (msgData.post.user_id === meId) {
-        return true
+        return true;
+    }
+    // we are in a direct message channel
+    if (msgData.channel_type === 'D') {
+        return false;
     }
 
-    for (let i = previousPosts.length - 1; i >= 0; i--) {
-        // we were asked to stop participating in the conversation
-        if (previousPosts[i].props.bot_status === 'stopped') {
-            return true
-        }
-
-        if (previousPosts[i].user_id === meId || previousPosts[i].message.includes(name)) {
-            // we are in a thread were we are actively participating, or we were mentioned in the thread => respond
-            return false
-        }
+    // we are in a channel and not mentioned
+    if (msgData.channel_type === 'O' && msgData.mentions.includes(meId)) {
+        return false;
     }
-
     // we are in a thread but did not participate or got mentioned - we should ignore this message
-    return true
+    return true;
 }
 
 /**
@@ -145,6 +168,9 @@ function isMessageIgnored(msgData: MessageData, meId: string, previousPosts: Pos
  */
 function parseMessageData(msg: JSONMessageData): MessageData {
     return {
+        channel_display_name: msg.channel_display_name,
+        channel_name: msg.channel_name,
+        channel_type: msg.channel_type,
         mentions: JSON.parse(msg.mentions ?? '[]'),
         post: JSON.parse(msg.post),
         sender_name: msg.sender_name
