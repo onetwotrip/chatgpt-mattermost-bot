@@ -125,10 +125,10 @@ export async function createChatCompletion(messages: ChatCompletionRequestMessag
         max_tokens: max_tokens,
         temperature: temperature,
     }
-    if(functions) {
-        chatCompletionOptions.functions = functions
-        chatCompletionOptions.function_call = 'auto'
-    }
+    // if(functions) {
+    //     chatCompletionOptions.functions = functions
+    //     chatCompletionOptions.function_call = 'auto'
+    // }
 
     log.trace({chatCompletionOptions})
 

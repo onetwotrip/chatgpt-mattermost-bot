@@ -1,3 +1,5 @@
+import { DateTime} from 'luxon';
+
 import {continueThread, registerChatPlugin} from "./openai-wrapper";
 import {mmClient, wsClient} from "./mm-client";
 import 'babel-polyfill'
@@ -52,8 +54,15 @@ async function onClientMessage(msg: WebSocketMessage<JSONMessageData>, meId: str
         return
     }
 
-    const msgData = parseMessageData(msg.data)
-    const posts = await getOlderPosts(msgData.post, {lookBackTime: 1000 * 60 * 60 * 24})
+    const msgData = parseMessageData(msg.data);
+
+    let lookBackTime;
+
+    if (msgData.channel_type === 'D') {
+        lookBackTime = 1000 * 60 * 60 * 24;
+    }
+
+    const posts = await getOlderPosts(msgData.post, { lookBackTime })
 
     if (isMessageIgnored(msgData, meId, posts)) {
         return
@@ -90,13 +99,13 @@ async function onClientMessage(msg: WebSocketMessage<JSONMessageData>, meId: str
         if (threadPost.user_id === meId) {
             chatmessages.push({
                 role: ChatCompletionRequestMessageRoleEnum.Assistant,
-                content: threadPost.props.originalMessage ?? threadPost.message
+                content: `${DateTime.fromMillis(threadPost.create_at).toFormat('dd-MM-yyyy HH:mm:ss')} ${threadPost.props.originalMessage ?? threadPost.message}`
             })
         } else {
             chatmessages.push({
                 role: ChatCompletionRequestMessageRoleEnum.User,
                 name: await userIdToName(threadPost.user_id),
-                content: threadPost.message
+                content: `${DateTime.fromMillis(threadPost.create_at).toFormat('dd-MM-yyyy HH:mm:ss')} ${threadPost.message}`
             })
         }
     }
@@ -149,13 +158,8 @@ function isMessageIgnored(msgData: MessageData, meId: string, previousPosts: Pos
     if (msgData.post.user_id === meId) {
         return true;
     }
-    // we are in a direct message channel
-    if (msgData.channel_type === 'D') {
-        return false;
-    }
-
-    // we are in a channel and not mentioned
-    if (msgData.channel_type === 'O' && msgData.mentions.includes(meId)) {
+    // we are in a direct message channel || a channel and not mentioned
+    if (msgData.channel_type === 'D' || msgData.mentions.includes(meId)) {
         return false;
     }
     // we are in a thread but did not participate or got mentioned - we should ignore this message
