@@ -99,7 +99,7 @@ async function onClientMessage(msg: WebSocketMessage<JSONMessageData>, meId: str
         if (threadPost.user_id === meId) {
             chatmessages.push({
                 role: ChatCompletionRequestMessageRoleEnum.Assistant,
-                content: `${DateTime.fromMillis(threadPost.create_at).toFormat('dd-MM-yyyy HH:mm:ss')} ${threadPost.props.originalMessage ?? threadPost.message}`
+                content: threadPost.props.originalMessage ?? threadPost.message
             })
         } else {
             chatmessages.push({
