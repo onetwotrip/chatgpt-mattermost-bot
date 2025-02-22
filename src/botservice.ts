@@ -74,16 +74,21 @@ async function onClientMessage(msg: WebSocketMessage<JSONMessageData>, meId: str
 
     const splitMessage = split(msgData.post.message, ' ', 2);
 
+    let useFunctions = true;
+
     if (splitMessage[1] === 'summary') {
         botInstructions = summaryPrompt + (splitMessage[2] ?? '');
+        useFunctions = false;
     }
 
     if (splitMessage[1] === 'summary_day') {
         botInstructions = summaryDayPrompt + (splitMessage[2] ?? '');
+        useFunctions = false;
     }
 
     if (splitMessage[1] === 'summary_advice') {
         botInstructions = summaryAdvicePrompt + (splitMessage[2] ?? '');
+        useFunctions = false;
     }
 
     const chatmessages: ChatCompletionRequestMessage[] = [
@@ -116,7 +121,7 @@ async function onClientMessage(msg: WebSocketMessage<JSONMessageData>, meId: str
     const typingInterval = setInterval(typing, 2000)
 
     try {
-        const {message, fileId, props} = await continueThread(chatmessages, msgData)
+        const {message, fileId, props} = await continueThread(chatmessages, msgData, { useFunctions })
         botLog.trace({message})
 
         // create answer response
