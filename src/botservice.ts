@@ -159,6 +159,13 @@ function isMessageIgnored(msgData: MessageData, meId: string, previousPosts: Pos
     if (msgData.post.root_id === '' && !msgData.mentions.includes(meId)) {
         return true;
     }
+    if (
+        msgData.post.message.substring(0, 5) === '@here' ||
+        msgData.post.message.substring(0, 8) === '@channel' ||
+        msgData.post.message.substring(0, 9) === '@everyone'
+    ) {
+        return true;
+    }
     // it is our own message
     if (msgData.post.user_id === meId) {
         return true;
