@@ -160,9 +160,9 @@ function isMessageIgnored(msgData: MessageData, meId: string, previousPosts: Pos
         return true;
     }
     if (
-        msgData.post.message.substring(0, 5) === '@here' ||
-        msgData.post.message.substring(0, 8) === '@channel' ||
-        msgData.post.message.substring(0, 9) === '@everyone'
+        msgData.post.message.includes('@here') ||
+        msgData.post.message.includes('@channel') ||
+        msgData.post.message.includes('@everyone')
     ) {
         return true;
     }
