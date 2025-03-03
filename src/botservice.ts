@@ -18,12 +18,15 @@ import {botLog, matterMostLog} from "./logging";
 
 import { summaryPrompt, summaryDayPrompt, summaryAdvicePrompt } from "./summary";
 
+import Storage from "./storage";
+import Prompts from "./models/prompts";
+
 if (!global.FormData) {
     global.FormData = require('form-data')
 }
 
 const name = process.env['MATTERMOST_BOTNAME'] || '@chatgpt'
-const contextMsgCount = Number(process.env['BOT_CONTEXT_MSG'] ?? 100)
+const contextMsgCount = Number(process.env['BOT_CONTEXT_MSG'] ?? 2500)
 const additionalBotInstructions = process.env['BOT_INSTRUCTION'] || "You are a helpful assistant. Whenever users asks you for help you will " +
     "provide them with succinct answers formatted using Markdown. You know the user's name as it is provided within the " +
     "meta data of the messages."
@@ -49,6 +52,11 @@ function split(text: string, delimeter: string, length: number) {
 }
 
 async function onClientMessage(msg: WebSocketMessage<JSONMessageData>, meId: string) {
+    // example
+    // const storage = new Storage({});
+    // await storage.init();
+    // const prompts = new Prompts({}, storage);
+
     if (msg.event !== 'posted' || !meId) {
         matterMostLog.debug({ msg: msg })
         return
