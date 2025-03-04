@@ -53,9 +53,12 @@ function split(text: string, delimeter: string, length: number) {
 
 async function onClientMessage(msg: WebSocketMessage<JSONMessageData>, meId: string) {
     // example
-    // const storage = new Storage({});
-    // await storage.init();
-    // const prompts = new Prompts({}, storage);
+    const storage = new Storage({});
+    await storage.init();
+    const prompts = new Prompts({}, storage);
+
+    console.log(await prompts.getAll({}));
+    // end example
 
     if (msg.event !== 'posted' || !meId) {
         matterMostLog.debug({ msg: msg })
